@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#4318FF" id="meta-theme-color">
+    <title>بوابة الطالب - نظام الغيابات والجدول</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
+
+        :root {
+            --bg-app: #f4f7fe;
+            --card-bg: #ffffff;
+            --brand-primary: #4318FF;
+            --text-main: #2B3674;
+            --text-muted: #A3AED0;
+            --success: #01B574;
+            --warning: #FFCE20;
+            --danger: #EE5D50;
+            --border-light: #E0E5F2;
+            --input-bg: #f8fafc;
+        }
+
+        body.dark-mode {
+            --bg-app: #0f172a; --card-bg: #1e293b; --brand-primary: #6366f1;
+            --text-main: #f1f5f9; --text-muted: #94a3b8; --border-light: #334155; --input-bg: #0f172a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-app); color: var(--text-main); font-family: 'Tajawal', sans-serif; padding: 20px 15px 80px 15px; transition: 0.3s; }
+        .container { max-width: 900px; margin: 0 auto; }
+
+        .top-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+        .action-btn { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-light); padding: 8px 12px; border-radius: 10px; font-family: 'Tajawal'; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        .action-btn:hover { border-color: var(--brand-primary); }
+        .btn-primary { background: var(--brand-primary); color: white; border: none; }
+        .btn-primary:hover { opacity: 0.9; }
+
+        .header { margin-bottom: 25px; }
+        .header h1 { font-size: 1.8rem; font-weight: 900; }
+        .header p { font-size: 1rem; color: var(--text-muted); font-weight: 500; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: var(--card-bg); padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: space-between; }
+        .stat-info { display: flex; flex-direction: column; gap: 5px; }
+        .stat-title { font-size: 0.85rem; color: var(--text-muted); font-weight: 700; }
+        .stat-val { font-size: 1.5rem; font-weight: 900; color: var(--text-main); }
+        .stat-icon { width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.3rem; }
+        .icon-blue { background: rgba(67, 24, 255, 0.1); color: var(--brand-primary); }
+        .icon-red { background: rgba(238, 93, 80, 0.1); color: var(--danger); }
+        .icon-green { background: rgba(1, 181, 116, 0.1); color: var(--success); }
+        .limit-input { width: 55px; padding: 4px; border-radius: 8px; border: 1px solid var(--border-light); font-family: 'Tajawal'; font-weight: 900; font-size: 1.1rem; text-align: center; color: var(--brand-primary); background: var(--input-bg); outline: none; }
+
+        .chart-container { background: var(--card-bg); padding: 15px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 30px; height: 250px; width: 100%; }
+
+        /* ---------------- جدول المحاضرات ---------------- */
+        .schedule-container { margin-bottom: 35px; }
+        .schedule-tabs { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
+        .schedule-tabs::-webkit-scrollbar { height: 4px; }
+        .schedule-tabs::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+        .tab-btn { background: var(--card-bg); border: 1px solid var(--border-light); padding: 8px 20px; border-radius: 12px; font-family: 'Tajawal'; font-weight: 800; cursor: pointer; color: var(--text-muted); transition: 0.3s; white-space: nowrap; }
+        .tab-btn.active { background: var(--brand-primary); color: white; border-color: var(--brand-primary); box-shadow: 0 4px 10px rgba(67, 24, 255, 0.2); }
+        
+        .lecture-card { background: var(--card-bg); border-radius: 16px; padding: 15px; display: flex; align-items: center; gap: 15px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); border: 1px solid var(--border-light); flex-wrap: wrap; }
+        .lec-time { font-size: 0.85rem; color: var(--brand-primary); font-weight: 900; background: rgba(67, 24, 255, 0.1); padding: 6px 12px; border-radius: 10px; text-align: center; white-space: nowrap; }
+        .lec-details { flex: 1; min-width: 150px; }
+        .lec-name { font-weight: 900; font-size: 1.05rem; color: var(--text-main); margin-bottom: 4px; }
+        .lec-hall { font-size: 0.8rem; color: var(--text-muted); font-weight: 700; }
+        
+        .btn-quick-abs { background: rgba(238, 93, 80, 0.1); color: var(--danger); border: none; padding: 10px 14px; border-radius: 10px; font-family: 'Tajawal'; font-weight: 800; cursor: pointer; font-size: 0.85rem; transition: 0.2s; white-space: nowrap; }
+        .btn-quick-abs:hover:not(:disabled) { background: var(--danger); color: white; transform: translateY(-2px); }
+        .btn-quick-abs:disabled { background: rgba(1, 181, 116, 0.1) !important; color: var(--success) !important; cursor: not-allowed; transform: none; box-shadow: none; border: 1px solid rgba(1, 181, 116, 0.2); }
+        
+        body.dark-mode .lecture-card { border-color: var(--border-light); background: var(--input-bg); }
+        body.dark-mode .btn-quick-abs:disabled { background: rgba(1, 181, 116, 0.15) !important; }
+
+        /* ---------------- شبكة المواد ---------------- */
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .section-title { font-size: 1.3rem; font-weight: 900; display: flex; align-items: center; gap: 8px; }
+        .sort-select { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-light); padding: 8px 12px; border-radius: 10px; font-family: 'Tajawal'; font-weight: 700; outline: none; }
+        .subjects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        
+        .subject-card { background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid transparent; display: flex; flex-direction: column; transition: 0.3s; }
+        body.dark-mode .subject-card.danger-state { background: rgba(238, 93, 80, 0.1); border-color: rgba(238, 93, 80, 0.4); }
+        body:not(.dark-mode) .subject-card.danger-state { background: #fffcfc; border-color: rgba(238, 93, 80, 0.3); }
+        .subject-card.warning-state { border-color: rgba(255, 206, 32, 0.4); }
+        .subj-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+        .subj-title { font-weight: 800; font-size: 1.1rem; line-height: 1.4; display: flex; flex-direction: column; gap: 4px; }
+        .subj-ects { font-size: 0.75rem; color: var(--brand-primary); font-weight: 700; background: rgba(67, 24, 255, 0.1); padding: 2px 8px; border-radius: 6px; width: fit-content; }
+        
+        .header-actions { display: flex; gap: 8px; align-items: flex-start; }
+        
+        .badge { padding: 5px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 800; white-space: nowrap; height: fit-content; }
+        .badge-safe { background: rgba(1, 181, 116, 0.1); color: var(--success); }
+        .badge-warning { background: rgba(255, 206, 32, 0.15); color: #d97706; }
+        body.dark-mode .badge-warning { color: var(--warning); }
+        .badge-danger { background: rgba(238, 93, 80, 0.1); color: var(--danger); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        .controls-wrapper { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .hours-box { display: flex; flex-direction: column; gap: 4px; }
+        .hours-box label { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; }
+        .hours-box input { padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border-light); font-family: 'Tajawal'; font-weight: 700; font-size: 0.9rem; width: 60px; color: var(--text-main); background: var(--input-bg); }
+        .stepper { display: flex; align-items: center; gap: 10px; background: var(--bg-app); padding: 5px; border-radius: 12px; }
+        .step-btn { background: var(--card-bg); border: none; width: 30px; height: 30px; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; color: var(--text-main); display: flex; justify-content: center; align-items: center; }
+        .step-val { font-size: 1.1rem; font-weight: 900; min-width: 20px; text-align: center; }
+
+        .progress-container { width: 100%; margin-bottom: 10px; }
+        .progress-labels { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; }
+        .progress-track { width: 100%; height: 8px; background: var(--bg-app); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+
+        .card-bottom-actions { display: flex; justify-content: space-between; margin-top: auto; border-top: 1px dashed var(--border-light); padding-top: 10px; gap: 10px; }
+        .dates-toggle-btn { background: none; border: none; color: var(--text-muted); font-family: 'Tajawal'; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        
+        .dates-log { display: none; margin-top: 10px; max-height: 120px; overflow-y: auto; }
+        .dates-log.active { display: block; }
+        .date-item { background: var(--input-bg); padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; margin-bottom: 6px; display: flex; justify-content: space-between; border: 1px solid var(--border-light); }
+
+        /* ---------------- متتبع السعي الفصلي ---------------- */
+        .formative-section { display: none; margin-top: 10px; }
+        .formative-section.active { display: block; animation: fadeIn 0.3s ease; }
+        .formative-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .formative-box { background: var(--input-bg); padding: 10px; border-radius: 10px; border: 1px solid var(--border-light); text-align: center; }
+        .formative-box label { display: block; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-bottom: 5px; }
+        .formative-box input { width: 100%; padding: 5px; border-radius: 6px; border: 1px solid var(--border-light); font-family: 'Tajawal'; font-weight: 900; text-align: center; color: var(--brand-primary); background: var(--card-bg); outline: none; }
+        .final-target { font-size: 0.85rem; font-weight: 800; text-align: center; padding: 10px; border-radius: 8px; background: rgba(67, 24, 255, 0.05); color: var(--brand-primary); border: 1px solid rgba(67, 24, 255, 0.1); }
+        .final-target.safe { background: rgba(1, 181, 116, 0.1); color: var(--success); border-color: rgba(1, 181, 116, 0.2); }
+        .final-target.danger { background: rgba(238, 93, 80, 0.1); color: var(--danger); border-color: rgba(238, 93, 80, 0.2); }
+
+        /* النوافذ المنبثقة (Modals) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 2000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: var(--card-bg); width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .modal-title { font-size: 1.3rem; font-weight: 900; margin-bottom: 15px; color: var(--text-main); text-align: center; }
+        .form-group { text-align: right; margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 0.9rem; font-weight: 700; margin-bottom: 5px; }
+        .form-group input { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border-light); background: var(--input-bg); color: var(--text-main); font-family: 'Tajawal'; outline: none; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-family: 'Tajawal'; font-weight: 800; cursor: pointer; text-align: center; }
+        .btn-cancel { background: var(--bg-app); color: var(--text-main); }
+        .gpa-subject-row { display: flex; justify-content: space-between; align-items: center; background: var(--input-bg); padding: 10px; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border-light); }
+        .gpa-subj-name { font-size: 0.85rem; font-weight: 700; flex: 1; }
+        .gpa-subj-input { width: 60px; padding: 5px; text-align: center; border: 1px solid var(--border-light); border-radius: 6px; font-family: 'Tajawal'; font-weight: bold; margin-right: 10px; }
+        .gpa-result-box { background: rgba(1, 181, 116, 0.1); color: var(--success); padding: 15px; border-radius: 12px; text-align: center; margin-top: 15px; display: none; }
+        .gpa-result-val { font-size: 2rem; font-weight: 900; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="app-container">
+        
+        <div class="top-actions" data-html2canvas-ignore>
+            <button class="action-btn" onclick="toggleDarkMode()">
+                <span id="theme-icon">🌙</span> الوضع الليلي
+            </button>
+            <button class="action-btn" onclick="exportData()">💾 نسخة احتياطية</button>
+            <label class="action-btn file-upload-label">
+                📥 استيراد
+                <input type="file" accept=".json" style="display:none" onchange="importData(event)">
+            </label>
+            <button class="action-btn" onclick="exportAsImage()">📸 لقطة الموقف</button>
+            <button class="action-btn btn-primary" onclick="openGpaModal()" style="margin-right: auto;">🧮 حاسبة المعدل</button>
+        </div>
+
+        <div class="header">
+            <h1>نظام المتابعة الأكاديمية 🎓</h1>
+            <p>جامعة واسط - قسم الاقتصاد (مسار بولونيا)</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-title">إجمالي الغيابات</span>
+                    <span class="stat-val" id="total-absences">0</span>
+                </div>
+                <div class="stat-icon icon-blue">📊</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-title">مواد في مرحلة الخطر</span>
+                    <span class="stat-val" id="danger-count" style="color: var(--danger);">0</span>
+                </div>
+                <div class="stat-icon icon-red">🚨</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-title">نسبة الحرمان (%)</span>
+                    <input type="number" id="limit-input" class="limit-input" value="10" min="5" max="25" onchange="updateGlobalLimit()">
+                </div>
+                <div class="stat-icon icon-green">⚙️</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="absencesChart"></canvas>
+        </div>
+
+        <!-- قسم الجدول الأسبوعي -->
+        <div class="schedule-container" data-html2canvas-ignore>
+            <h2 class="section-title" style="margin-bottom: 15px;">📅 جدول المحاضرات</h2>
+            
+            <div class="schedule-tabs" id="schedule-tabs">
+                <button class="tab-btn" onclick="renderSchedule(0)">الأحد</button>
+                <button class="tab-btn" onclick="renderSchedule(1)">الإثنين</button>
+                <button class="tab-btn" onclick="renderSchedule(2)">الثلاثاء</button>
+                <button class="tab-btn" onclick="renderSchedule(3)">الأربعاء</button>
+            </div>
+
+            <div id="schedule-list">
+                <!-- المحاضرات تظهر هنا -->
+            </div>
+        </div>
+
+        <div class="section-header">
+            <h2 class="section-title">📚 الموقف الفصلي للمواد</h2>
+            <div style="display: flex; gap: 10px;">
+                <select class="sort-select" id="sort-select" onchange="renderUI()" data-html2canvas-ignore>
+                    <option value="default">الترتيب الافتراضي</option>
+                    <option value="danger">الأقرب للحرمان</option>
+                    <option value="absences">الأعلى غياباً</option>
+                </select>
+                <button class="action-btn btn-primary" onclick="openAddModal()" data-html2canvas-ignore>➕ إضافة مادة</button>
+            </div>
+        </div>
+        
+        <div class="subjects-grid" id="subjects-container"></div>
+
+    </div>
+
+    <!-- النوافذ المنبثقة -->
+    <div class="modal-overlay" id="add-modal">
+        <div class="modal-content">
+            <div class="modal-title">إضافة مادة جديدة</div>
+            <div class="form-group">
+                <label>اسم المادة</label>
+                <input type="text" id="new-subj-name" placeholder="مثال: اقتصاد كلي">
+            </div>
+            <div class="form-group">
+                <label>الساعات الكلية المجدولة</label>
+                <input type="number" id="new-subj-hours" placeholder="30" value="30">
+            </div>
+            <div class="form-group">
+                <label>الوحدات الدراسية (ECTS)</label>
+                <input type="number" id="new-subj-ects" placeholder="مثال: 5" value="4">
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel" onclick="closeModal('add-modal')">إلغاء</button>
+                <button class="modal-btn btn-primary" onclick="addNewSubject()">حفظ المادة</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="gpa-modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-title">حاسبة المعدل (نظام بولونيا)</div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 20px;">أدخل درجاتك المتوقعة (من 100) ليتم حساب المعدل بناءً على وزن وحدات ECTS.</p>
+            <div id="gpa-subjects-list"></div>
+            <div class="gpa-result-box" id="gpa-result-box">
+                <div style="font-weight: 700;">المعدل التراكمي المتوقع</div>
+                <div class="gpa-result-val" id="gpa-final-score">0.00</div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel" onclick="closeModal('gpa-modal')">إغلاق</button>
+                <button class="modal-btn btn-primary" onclick="calculateGPA()">احسب المعدل</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let subjects = [];
+        let globalLimit = parseFloat(localStorage.getItem('bolognaLimitSetting')) || 10;
+        let chartInstance = null;
+        document.getElementById('limit-input').value = globalLimit;
+
+        // بيانات الجدول الوهمية (يمكنك تعديلها لاحقاً)
+        const weeklySchedule = {
+            0: [ 
+                { name: "نظرية اقتصادية جزئية", time: "08:30 ص - 10:30 ص", hall: "مدرج الاقتصاد" },
+                { name: "اللغة الإنكليزية", time: "10:30 ص - 12:30 م", hall: "مختبر الصوتيات" }
+            ],
+            1: [ 
+                { name: "تحليل الاحصاء الاقتصادي", time: "08:30 ص - 11:30 ص", hall: "قاعة 3 (المبنى الجديد)" }
+            ],
+            2: [ 
+                { name: "اساسيات علم الحاسوب", time: "08:30 ص - 10:30 ص", hall: "مختبر الحاسبات 2" },
+                { name: "اقتصاديات النقود والمصارف", time: "10:30 ص - 12:30 م", hall: "قاعة 1" }
+            ],
+            3: [ 
+                { name: "الأساليب الكمية والتطبيقات", time: "08:30 ص - 11:30 ص", hall: "قاعة 4" }
+            ]
+        };
+
+        const isDarkModeEnabled = localStorage.getItem('bolognaDarkMode') === 'true';
+        if (isDarkModeEnabled) {
+            document.body.classList.add('dark-mode');
+            document.getElementById('theme-icon').innerText = '☀️';
+            document.getElementById('meta-theme-color').setAttribute('content', '#0f172a');
+        }
+
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('bolognaDarkMode', isDark);
+            document.getElementById('theme-icon').innerText = isDark ? '☀️' : '🌙';
+            document.getElementById('meta-theme-color').setAttribute('content', isDark ? '#0f172a' : '#4318FF');
+            renderChart();
+        }
+
+        function initData() {
+            const v7Data = localStorage.getItem('bolognaAcademicV7');
+            if (v7Data) {
+                subjects = JSON.parse(v7Data);
+            } else {
+                // ترحيل البيانات القديمة وتهيئة حقول السعي لتكون 50 بشكل قسري
+                const oldData = localStorage.getItem('bolognaAcademicV6') || localStorage.getItem('bolognaAcademicV5') || localStorage.getItem('bolognaAcademicV4');
+                if(oldData) {
+                    let parsedOld = JSON.parse(oldData);
+                    subjects = parsedOld.map(sub => ({
+                        ...sub,
+                        ects: sub.ects || 4,
+                        formativeTotal: 50, // تم التثبيت على 50 
+                        formativeScore: sub.formativeScore || 0
+                    }));
+                } else {
+                    subjects = [
+                        { id: 1, name: "نظرية اقتصادية جزئية", totalHours: 30, absenceDates: [], ects: 5, formativeTotal: 50, formativeScore: 0 },
+                        { id: 2, name: "تحليل الاحصاء الاقتصادي", totalHours: 30, absenceDates: [], ects: 5, formativeTotal: 50, formativeScore: 0 },
+                        { id: 3, name: "اساسيات علم الحاسوب", totalHours: 30, absenceDates: [], ects: 4, formativeTotal: 50, formativeScore: 0 },
+                        { id: 4, name: "اللغة الإنكليزية", totalHours: 30, absenceDates: [], ects: 3, formativeTotal: 50, formativeScore: 0 },
+                        { id: 5, name: "اقتصاديات النقود والمصارف", totalHours: 30, absenceDates: [], ects: 5, formativeTotal: 50, formativeScore: 0 },
+                        { id: 6, name: "الأساليب الكمية والتطبيقات", totalHours: 30, absenceDates: [], ects: 6, formativeTotal: 50, formativeScore: 0 }
+                    ];
+                }
+                saveData();
+            }
+            
+            let currentDay = new Date().getDay(); 
+            if(currentDay > 3) currentDay = 0; 
+            renderSchedule(currentDay);
+        }
+
+        function saveData() {
+            localStorage.setItem('bolognaAcademicV7', JSON.stringify(subjects));
+            localStorage.setItem('bolognaLimitSetting', globalLimit);
+        }
+
+        // --- وظائف الجدول ---
+        function renderSchedule(dayIndex) {
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach((btn, i) => {
+                if (i === dayIndex) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+
+            const list = document.getElementById('schedule-list');
+            list.innerHTML = '';
+            
+            const lectures = weeklySchedule[dayIndex] || [];
+            if(lectures.length === 0) {
+                list.innerHTML = '<div style="text-align:center; padding: 20px; color:var(--text-muted); font-weight:bold;">لا توجد محاضرات مجدولة لهذا اليوم 🎉</div>';
+                return;
+            }
+
+            lectures.forEach(lec => {
+                list.innerHTML += `
+                    <div class="lecture-card">
+                        <div class="lec-time">${lec.time}</div>
+                        <div class="lec-details">
+                            <div class="lec-name">${lec.name}</div>
+                            <div class="lec-hall">📍 ${lec.hall}</div>
+                        </div>
+                        <button class="btn-quick-abs" onclick="quickAbsence('${lec.name}', this)">➕ تسجيل غياب</button>
+                    </div>
+                `;
+            });
+        }
+
+        function quickAbsence(subjName, btnElement) {
+            const sub = subjects.find(s => s.name === subjName);
+            if(sub) {
+                // تسجيل الغياب برمجياً في الموقف الفصلي
+                changeAbsence(sub.id, 1);
+                
+                // تغيير شكل الزر وإيقافه بشكل مؤقت (يتصفر عند التحديث أو تغيير اليوم)
+                btnElement.innerHTML = '✔️ تم تسجيل الغياب';
+                btnElement.disabled = true;
+            } else {
+                alert('عذراً، هذه المادة غير موجودة في الموقف الفصلي! يرجى إضافتها أولاً بنفس الاسم عبر زر (إضافة مادة).');
+            }
+        }
+        // ----------------------
+
+        function openAddModal() {
+            document.getElementById('new-subj-name').value = '';
+            document.getElementById('new-subj-hours').value = '30';
+            document.getElementById('new-subj-ects').value = '4';
+            document.getElementById('add-modal').classList.add('active');
+        }
+        function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
+
+        function addNewSubject() {
+            const name = document.getElementById('new-subj-name').value.trim();
+            const hours = parseInt(document.getElementById('new-subj-hours').value);
+            const ects = parseInt(document.getElementById('new-subj-ects').value);
+            if(name && hours > 0 && ects > 0) {
+                subjects.push({ id: Date.now(), name: name, totalHours: hours, absenceDates: [], ects: ects, formativeTotal: 50, formativeScore: 0 });
+                saveData(); renderUI(); closeModal('add-modal');
+            }
+        }
+
+        function exportAsImage() {
+            const container = document.getElementById('app-container');
+            const originalBg = container.style.backgroundColor;
+            container.style.backgroundColor = getComputedStyle(document.body).getPropertyValue('--bg-app');
+            html2canvas(container, { scale: 2, useCORS: true }).then(canvas => {
+                container.style.backgroundColor = originalBg;
+                let link = document.createElement('a');
+                link.download = `الموقف_الفصلي_${new Date().toLocaleDateString('en-GB').replace(/\//g,'-')}.png`;
+                link.href = canvas.toDataURL("image/png"); link.click();
+            });
+        }
+
+        function openGpaModal() {
+            const listDiv = document.getElementById('gpa-subjects-list');
+            listDiv.innerHTML = '';
+            document.getElementById('gpa-result-box').style.display = 'none';
+            if(subjects.length === 0) {
+                listDiv.innerHTML = '<p style="text-align:center; color:var(--text-muted)">لا توجد مواد.</p>';
+            } else {
+                subjects.forEach(sub => {
+                    listDiv.innerHTML += `
+                        <div class="gpa-subject-row">
+                            <div class="gpa-subj-name">${sub.name} <span class="subj-ects" style="margin-right:5px">${sub.ects} ECTS</span></div>
+                            <input type="number" class="gpa-subj-input" id="gpa-grade-${sub.id}" placeholder="0" min="0" max="100">
+                        </div>`;
+                });
+            }
+            document.getElementById('gpa-modal').classList.add('active');
+        }
+
+        function calculateGPA() {
+            let totalPoints = 0, totalECTS = 0;
+            subjects.forEach(sub => {
+                const gradeInput = document.getElementById(`gpa-grade-${sub.id}`);
+                if(gradeInput) {
+                    const grade = parseFloat(gradeInput.value) || 0;
+                    totalPoints += (grade * sub.ects); totalECTS += sub.ects;
+                }
+            });
+            if(totalECTS > 0) {
+                document.getElementById('gpa-final-score').innerText = (totalPoints / totalECTS).toFixed(2) + " %";
+                document.getElementById('gpa-result-box').style.display = 'block';
+            }
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ version: "7", limit: globalLimit, data: subjects }));
+            const a = document.createElement('a'); a.href = dataStr; a.download = "Bologna_Backup.json";
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if(imported.data) {
+                        subjects = imported.data.map(sub => ({ 
+                            ...sub, 
+                            ects: sub.ects || 4,
+                            formativeTotal: sub.formativeTotal || 50,
+                            formativeScore: sub.formativeScore || 0
+                        }));
+                        if(imported.limit) globalLimit = imported.limit;
+                        document.getElementById('limit-input').value = globalLimit;
+                        saveData(); renderUI(); alert('تم الاسترجاع بنجاح!');
+                    }
+                } catch (err) { alert("ملف غير صالح."); }
+            };
+            reader.readAsText(file); event.target.value = '';
+        }
+
+        function updateGlobalLimit() {
+            let val = parseFloat(document.getElementById('limit-input').value);
+            if (val >= 5 && val <= 100) { globalLimit = val; saveData(); renderUI(); }
+        }
+
+        function updateHours(id, newTotal) {
+            const val = parseInt(newTotal);
+            if(val > 0) {
+                const sub = subjects.find(s => s.id === id);
+                if(sub) { 
+                    sub.totalHours = val; 
+                    if(sub.absenceDates.length > sub.totalHours) sub.absenceDates = sub.absenceDates.slice(0, sub.totalHours);
+                    saveData(); renderUI(); 
+                }
+            }
+        }
+
+        // --- وظائف التقييم التكويني (السعي) ---
+        function toggleFormativeLog(id, btnElement) {
+            const div = document.getElementById(`formative-${id}`);
+            const logDiv = document.getElementById(`log-${id}`);
+            
+            // إغلاق سجل التواريخ إذا كان مفتوحاً لترتيب الواجهة
+            if(logDiv.classList.contains('active')) { logDiv.classList.remove('active'); }
+            
+            div.classList.toggle('active');
+        }
+
+        function updateFormative(id, field, value) {
+            const sub = subjects.find(s => s.id === id);
+            if(sub) {
+                sub[field] = parseFloat(value) || 0;
+                saveData();
+                updateFormativeTargetUI(sub);
+            }
+        }
+
+        function updateFormativeTargetUI(sub) {
+            const targetDiv = document.getElementById(`final-target-${sub.id}`);
+            if(!targetDiv) return;
+            
+            // حساب الدرجة المطلوبة بالنهائي (درجة النجاح الكلية 50)
+            const passingGrade = 50;
+            const requiredFinal = passingGrade - sub.formativeScore;
+            const finalWeight = 100 - sub.formativeTotal; // عادة الفاينل 50 إذا السعي 50
+            
+            targetDiv.classList.remove('safe', 'danger');
+            
+            if (requiredFinal <= 0) {
+                targetDiv.innerHTML = `🎉 ناجح في السعي! لا تحتاج لدرجات بالفاينل للنجاح.`;
+                targetDiv.classList.add('safe');
+            } else if (requiredFinal > finalWeight) {
+                targetDiv.innerHTML = `⚠️ درجتك الحالية لا تكفي للنجاح حتى لو حصلت على درجة كاملة بالفاينل.`;
+                targetDiv.classList.add('danger');
+            } else {
+                targetDiv.innerHTML = `تحتاج <b>${requiredFinal}</b> درجة في الفاينل (من ${finalWeight}) للنجاح.`;
+            }
+        }
+        // -------------------------------------
+
+        function changeAbsence(id, amount) {
+            const sub = subjects.find(s => s.id === id);
+            if(sub) {
+                if(!sub.absenceDates) sub.absenceDates = [];
+                if (amount > 0 && sub.absenceDates.length < sub.totalHours) {
+                    const today = new Date().toLocaleDateString('ar-IQ', { year: 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
+                    sub.absenceDates.push(today);
+                } else if (amount < 0 && sub.absenceDates.length > 0) {
+                    sub.absenceDates.pop();
+                }
+                saveData(); renderUI();
+            }
+        }
+
+        function toggleDatesLog(id, btnElement) {
+            const logDiv = document.getElementById(`log-${id}`);
+            const formativeDiv = document.getElementById(`formative-${id}`);
+            
+            // إغلاق واجهة السعي إذا كانت مفتوحة
+            if(formativeDiv.classList.contains('active')) { formativeDiv.classList.remove('active'); }
+            
+            logDiv.classList.toggle('active');
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('absencesChart').getContext('2d');
+            const isDark = document.body.classList.contains('dark-mode');
+            const displaySubjects = getSortedSubjects();
+            const labels = displaySubjects.map(s => s.name.length > 15 ? s.name.substring(0, 15) + '...' : s.name);
+            const dataPct = displaySubjects.map(s => (s.absenceDates ? (s.absenceDates.length / s.totalHours) * 100 : 0).toFixed(1));
+            const bgColors = dataPct.map(val => val >= globalLimit ? '#EE5D50' : (val >= globalLimit/2 ? '#FFCE20' : '#01B574'));
+
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ label: 'نسبة الغياب %', data: dataPct, backgroundColor: bgColors, borderRadius: 6, maxBarThickness: 40 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, max: globalLimit + 5, grid: { color: isDark ? '#334155' : '#E0E5F2' }, ticks: { color: isDark ? '#94a3b8' : '#A3AED0', font: {family: 'Tajawal'} } },
+                        x: { grid: { display: false }, ticks: { color: isDark ? '#94a3b8' : '#A3AED0', font: {family: 'Tajawal', size: 10} } }
+                    }
+                }
+            });
+        }
+
+        function getSortedSubjects() {
+            const sortType = document.getElementById('sort-select').value;
+            let sorted = [...subjects];
+            if (sortType === 'absences') {
+                sorted.sort((a, b) => (b.absenceDates?.length || 0) - (a.absenceDates?.length || 0));
+            } else if (sortType === 'danger') {
+                sorted.sort((a, b) => {
+                    let pctA = ((a.absenceDates?.length || 0) / a.totalHours) * 100;
+                    let pctB = ((b.absenceDates?.length || 0) / b.totalHours) * 100;
+                    return pctB - pctA;
+                });
+            }
+            return sorted;
+        }
+
+        function renderUI() {
+            const container = document.getElementById('subjects-container');
+            container.innerHTML = '';
+            let totalAbs = 0; let dangerCount = 0;
+            const sortedSubjects = getSortedSubjects();
+
+            sortedSubjects.forEach(sub => {
+                const absentCount = sub.absenceDates ? sub.absenceDates.length : 0;
+                totalAbs += absentCount;
+                let percentage = (absentCount / sub.totalHours) * 100;
+                
+                let warningThreshold = globalLimit / 2;
+                let badgeClass = 'badge-safe'; let badgeText = 'آمن';
+                let cardClass = ''; let progressColor = 'var(--success)';
+
+                if (percentage >= globalLimit) { badgeClass = 'badge-danger'; badgeText = 'حرمان 🚨'; cardClass = 'danger-state'; progressColor = 'var(--danger)'; dangerCount++; }
+                else if (percentage >= warningThreshold) { badgeClass = 'badge-warning'; badgeText = 'إنذار ⚠️'; cardClass = 'warning-state'; progressColor = 'var(--warning)'; }
+
+                let datesHtml = absentCount === 0 ? 
+                    `<div class="date-item" style="justify-content:center; color:var(--text-muted);">لا توجد غيابات</div>` :
+                    sub.absenceDates.map((date, i) => `<div class="date-item"><span style="color:var(--text-muted)">غياب ${i+1}</span><span>${date}</span></div>`).join('');
+
+                const card = document.createElement('div');
+                card.className = `subject-card ${cardClass}`;
+                card.innerHTML = `
+                    <div class="subj-header">
+                        <div class="header-actions">
+                            <div class="subj-title">${sub.name} <span class="subj-ects">${sub.ects} ECTS</span></div>
+                        </div>
+                        <span class="badge ${badgeClass}">${badgeText}</span>
+                    </div>
+                    
+                    <div class="controls-wrapper" data-html2canvas-ignore>
+                        <div class="hours-box">
+                            <label>الساعات الكلية</label>
+                            <input type="number" value="${sub.totalHours}" onchange="updateHours(${sub.id}, this.value)">
+                        </div>
+                        <div class="stepper">
+                            <button class="step-btn" onclick="changeAbsence(${sub.id}, -1)">-</button>
+                            <div class="step-val">${absentCount}</div>
+                            <button class="step-btn" onclick="changeAbsence(${sub.id}, 1)" style="color:var(--brand-primary)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="progress-container">
+                        <div class="progress-labels">
+                            <span style="color: var(--text-muted);">نسبة الغياب</span>
+                            <span style="color: ${progressColor}; font-weight: 900;">${percentage.toFixed(1)}%</span>
+                        </div>
+                        <div class="progress-track"><div class="progress-fill" style="width: ${Math.min(percentage, 100)}%; background: ${progressColor}"></div></div>
+                    </div>
+
+                    <div class="card-bottom-actions" data-html2canvas-ignore>
+                        <button class="dates-toggle-btn" onclick="toggleDatesLog(${sub.id}, this)">سجل الغياب 🔽</button>
+                        <button class="dates-toggle-btn" onclick="toggleFormativeLog(${sub.id}, this)" style="color: var(--brand-primary)">السعي الفصلي 📊</button>
+                    </div>
+                    
+                    <!-- سجل الغياب -->
+                    <div class="dates-log" id="log-${sub.id}">${datesHtml}</div>
+
+                    <!-- واجهة السعي الفصلي -->
+                    <div class="formative-section" id="formative-${sub.id}">
+                        <div class="formative-grid">
+                            <div class="formative-box">
+                                <label>درجة السعي (من)</label>
+                                <input type="number" value="${sub.formativeTotal}" onchange="updateFormative(${sub.id}, 'formativeTotal', this.value)">
+                            </div>
+                            <div class="formative-box">
+                                <label>درجتك الحالية</label>
+                                <input type="number" value="${sub.formativeScore}" oninput="updateFormative(${sub.id}, 'formativeScore', this.value)">
+                            </div>
+                        </div>
+                        <div class="final-target" id="final-target-${sub.id}"></div>
+                    </div>
+                `;
+                container.appendChild(card);
+                updateFormativeTargetUI(sub); 
+            });
+
+            document.getElementById('total-absences').innerText = totalAbs;
+            document.getElementById('danger-count').innerText = dangerCount;
+            renderChart();
+        }
+
+        initData(); renderUI();
+    </script>
+</body>
+</html>
